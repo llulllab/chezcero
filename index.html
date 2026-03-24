@@ -1,0 +1,520 @@
+import { useState, useRef, useEffect } from "react";
+
+const SAMPLE_RESPONSES = [
+  {
+    text: `Cero, bugun senin icin dunya mutfaklarindan 4 heyecan verici fikir sectim:
+
+---
+
+**1. Toprak Tabagi — NARISAWA, Tokyo**
+Sef Yoshihiro Narisawa, Nagano'dan getirdigi gercek topragi yemeklerinde kullaniyor. "Satoyama Scenery" adli baslangic tabaginda yenilebilir bir minyatur dag manzarasi yaratiyor — yosun, agaclar ve tepeler dahil.
+*Evde dene: Pancar tozu, matcha ve kurutulmus mantarla bir "orman zemini" tabagi yarat.*
+
+---
+
+**2. Jazz Duck — Osteria Francescana, Modena**
+Massimo Bottura'nin yeni sezon menusunde yer alan bu yemekte ordek, farkli pisirme teknikleriyle (confit, izgara, fume) sunuluyor ve ordek yagiyla glazelenmis panettone eslik ediyor.
+*Evde dene: Ordek gogsunu 3 farkli sekilde pisir, yaninda tereyagli brioche sun.*
+
+---
+
+**3. Mole Madre — Pujol, Mexico City**
+2800+ gundur surekli isitilip yenilenen, 100'den fazla malzemeli kadim bir mole sosu. Tabaga es merkezli halkalar halinde dokuluyor, uzerine taze mole ekleniyor.
+*Evde dene: Bir mole tarifine basla ve her hafta uzerine ekleyerek "yasayan" bir sos yarat.*
+
+---
+
+**4. Yenilebilir Helyum Balonu — Alinea, Chicago**
+Grant Achatz'in ikonik tatlisi: gercekten havada suzulen, yesil elma aromali seker balonu. Misafirler balonu ip ucundan tutup yiyor.
+*Evde dene: Izomalt sekerle seker baloncuklari dene, icine meyve aromasi ekle.*`,
+  },
+];
+
+const LOADING_MESSAGES = [
+  "Michelin yildizlarini ariyorum...",
+  "Dunya mutfaklarini tariyorum...",
+  "Seflerin ilhamlarini topluyorum...",
+  "En ilginc yemekleri seciyorum...",
+  "Tokyo'dan Paris'e, Lima'dan Bangkok'a...",
+];
+
+const FloralSVG = ({ size = 24, opacity = 0.35, style = {} }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 48 48"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style={{ opacity, display: "block", ...style }}
+  >
+    <g>
+      {[0, 60, 120, 180, 240, 300].map((angle, i) => (
+        <ellipse
+          key={i}
+          cx="24"
+          cy="24"
+          rx="4.5"
+          ry="10"
+          fill="#5B8FAF"
+          transform={`rotate(${angle} 24 24) translate(0 -8)`}
+          opacity={0.7}
+        />
+      ))}
+      <circle cx="24" cy="24" r="3.5" fill="#7BAFC9" />
+      <circle cx="24" cy="24" r="1.8" fill="#A8D4E6" />
+    </g>
+  </svg>
+);
+
+const FloralCluster = ({ style = {} }) => (
+  <div style={{ position: "absolute", pointerEvents: "none", ...style }}>
+    <FloralSVG size={20} opacity={0.25} />
+    <FloralSVG size={14} opacity={0.18} style={{ position: "absolute", top: -6, left: 16 }} />
+    <FloralSVG size={10} opacity={0.12} style={{ position: "absolute", top: 14, left: 20 }} />
+  </div>
+);
+
+export default function ChezCero() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("");
+  const [hasStarted, setHasStarted] = useState(false);
+  const chatEndRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loadingText]);
+
+  useEffect(() => {
+    let interval;
+    if (loading) {
+      let idx = 0;
+      setLoadingText(LOADING_MESSAGES[0]);
+      interval = setInterval(() => {
+        idx = (idx + 1) % LOADING_MESSAGES.length;
+        setLoadingText(LOADING_MESSAGES[idx]);
+      }, 2200);
+    }
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  const handleInspire = async () => {
+    setHasStarted(true);
+    setMessages((prev) => [...prev, { role: "user", text: "Bugun bana ilham ver!" }]);
+    setLoading(true);
+    await new Promise((r) => setTimeout(r, 4000));
+    setMessages((prev) => [...prev, { role: "assistant", text: SAMPLE_RESPONSES[0].text }]);
+    setLoading(false);
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() || loading) return;
+    const userMsg = input.trim();
+    setInput("");
+    setMessages((prev) => [...prev, { role: "user", text: userMsg }]);
+    setLoading(true);
+    await new Promise((r) => setTimeout(r, 3000));
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        text: `Cero, harika soru! "${userMsg}" hakkinda biraz daha detay vereyim...\n\nBu konuda Michelin seflerinin yaklasimi genellikle mevsimsel malzemeleri on plana cikarmak ve minimalist sunumla maksimum lezzet kontrasti yaratmak uzerine kurulu.\n\n*Not: Bu demo bir yanittir. Gercek n8n flow'u baglandiginda, detayli ve guncel yanitlar alacaksin.*`,
+      },
+    ]);
+    setLoading(false);
+    inputRef.current?.focus();
+  };
+
+  const formatMessage = (text) => {
+    return text.split("\n").map((line, i) => {
+      if (line.startsWith("**") && line.endsWith("**")) {
+        return (
+          <p key={i} style={{ fontWeight: 700, margin: "12px 0 4px" }}>
+            {line.replace(/\*\*/g, "")}
+          </p>
+        );
+      }
+      if (line.match(/^\*\*\d+\./)) {
+        const clean = line.replace(/\*\*/g, "");
+        return (
+          <p key={i} style={{ fontWeight: 700, fontSize: "1.05em", margin: "18px 0 4px", color: "#7BAFC9" }}>
+            {clean}
+          </p>
+        );
+      }
+      if (line.startsWith("*Evde dene:")) {
+        return (
+          <p key={i} style={{ fontStyle: "italic", color: "#5B8FAF", margin: "4px 0 14px", paddingLeft: 12, borderLeft: "2px solid rgba(91,143,175,0.4)", fontSize: "0.92em" }}>
+            {line.replace(/\*/g, "")}
+          </p>
+        );
+      }
+      if (line.startsWith("*Not:")) {
+        return (
+          <p key={i} style={{ fontStyle: "italic", opacity: 0.45, fontSize: "0.88em", marginTop: 12 }}>
+            {line.replace(/\*/g, "")}
+          </p>
+        );
+      }
+      if (line === "---") {
+        return <hr key={i} style={{ border: "none", borderTop: "1px solid rgba(91,143,175,0.1)", margin: "10px 0" }} />;
+      }
+      if (line.trim() === "") return <br key={i} />;
+      return (
+        <p key={i} style={{ margin: "4px 0", lineHeight: 1.65 }}>
+          {line}
+        </p>
+      );
+    });
+  };
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#0A0A0A",
+        fontFamily: "'Cormorant Garamond', Georgia, serif",
+        color: "#D4D0CB",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Subtle top glow */}
+      <div
+        style={{
+          position: "fixed",
+          top: "-20%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "120vw",
+          height: "60vh",
+          background: "radial-gradient(ellipse at center, rgba(91,143,175,0.035) 0%, transparent 70%)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
+      {/* Floral decorations */}
+      <FloralCluster style={{ top: 20, right: 30 }} />
+      <FloralCluster style={{ bottom: 60, left: 20 }} />
+      {!hasStarted && (
+        <>
+          <FloralCluster style={{ top: "35%", left: 40 }} />
+          <FloralCluster style={{ top: "55%", right: 50 }} />
+        </>
+      )}
+
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 660,
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          position: "relative",
+          zIndex: 1,
+          padding: "0 20px",
+        }}
+      >
+        {/* Header */}
+        <header
+          style={{
+            textAlign: "center",
+            paddingTop: hasStarted ? 28 : "16vh",
+            paddingBottom: hasStarted ? 16 : 44,
+            transition: "padding 0.8s cubic-bezier(0.4,0,0.2,1)",
+          }}
+        >
+          {!hasStarted && (
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+              <FloralSVG size={32} opacity={0.4} />
+            </div>
+          )}
+
+          <div
+            style={{
+              fontSize: hasStarted ? 26 : 52,
+              letterSpacing: hasStarted ? 3 : 6,
+              fontWeight: 600,
+              color: "#E8E4DF",
+              transition: "all 0.8s cubic-bezier(0.4,0,0.2,1)",
+            }}
+          >
+            Chez Cero
+          </div>
+          <div
+            style={{
+              fontSize: hasStarted ? 10 : 12,
+              letterSpacing: hasStarted ? 2 : 5,
+              textTransform: "uppercase",
+              color: "#5B8FAF",
+              marginTop: hasStarted ? 3 : 10,
+              fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
+              fontWeight: 400,
+              transition: "all 0.8s cubic-bezier(0.4,0,0.2,1)",
+            }}
+          >
+            Michelin Ilhamlari
+          </div>
+
+          {!hasStarted && (
+            <div
+              style={{
+                marginTop: 20,
+                fontSize: 15,
+                color: "#7a756e",
+                fontStyle: "italic",
+                lineHeight: 1.7,
+                maxWidth: 380,
+                marginLeft: "auto",
+                marginRight: "auto",
+              }}
+            >
+              Cero, dunyanin en ozel mutfaklarindan
+              <br />
+              sana ozel ilhamlar burada.
+            </div>
+          )}
+        </header>
+
+        {/* Main Button */}
+        {!hasStarted && (
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 40 }}>
+            <button
+              onClick={handleInspire}
+              style={{
+                background: "transparent",
+                color: "#D4D0CB",
+                border: "1px solid rgba(91,143,175,0.4)",
+                borderRadius: 100,
+                padding: "18px 44px",
+                fontSize: 14,
+                fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
+                fontWeight: 500,
+                letterSpacing: 4,
+                textTransform: "uppercase",
+                cursor: "pointer",
+                transition: "all 0.4s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = "rgba(91,143,175,0.1)";
+                e.target.style.borderColor = "rgba(91,143,175,0.7)";
+                e.target.style.color = "#E8E4DF";
+                e.target.style.boxShadow = "0 0 30px rgba(91,143,175,0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = "transparent";
+                e.target.style.borderColor = "rgba(91,143,175,0.4)";
+                e.target.style.color = "#D4D0CB";
+                e.target.style.boxShadow = "none";
+              }}
+            >
+              Bugun Bana Ilham Ver
+            </button>
+          </div>
+        )}
+
+        {/* Chat */}
+        {hasStarted && (
+          <div style={{ flex: 1, overflowY: "auto", paddingBottom: 100 }}>
+            {messages.map((msg, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                  marginBottom: 16,
+                  animation: "fadeSlideIn 0.4s ease-out",
+                }}
+              >
+                <div
+                  style={{
+                    maxWidth: msg.role === "user" ? "70%" : "95%",
+                    padding: msg.role === "user" ? "10px 18px" : "20px 24px",
+                    borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                    background: msg.role === "user" ? "rgba(91,143,175,0.15)" : "rgba(255,255,255,0.025)",
+                    border: msg.role === "user" ? "1px solid rgba(91,143,175,0.25)" : "1px solid rgba(255,255,255,0.05)",
+                    fontSize: 14,
+                    fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
+                    lineHeight: 1.6,
+                    backdropFilter: "blur(10px)",
+                  }}
+                >
+                  {msg.role === "assistant" ? formatMessage(msg.text) : msg.text}
+                </div>
+              </div>
+            ))}
+
+            {loading && (
+              <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 16 }}>
+                <div
+                  style={{
+                    padding: "14px 22px",
+                    borderRadius: "18px 18px 18px 4px",
+                    background: "rgba(255,255,255,0.025)",
+                    border: "1px solid rgba(255,255,255,0.05)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
+                    fontSize: 13,
+                    backdropFilter: "blur(10px)",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 5 }}>
+                    {[0, 1, 2].map((j) => (
+                      <div
+                        key={j}
+                        style={{
+                          width: 5,
+                          height: 5,
+                          borderRadius: "50%",
+                          background: "#5B8FAF",
+                          animation: `pulse 1.4s ease-in-out ${j * 0.25}s infinite`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <span style={{ fontStyle: "italic", color: "#6a6560" }}>{loadingText}</span>
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+        )}
+
+        {/* Input area */}
+        {hasStarted && (
+          <div
+            style={{
+              position: "fixed",
+              bottom: 0,
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "100%",
+              maxWidth: 660,
+              padding: "12px 20px 24px",
+              background: "linear-gradient(transparent, #0A0A0A 30%)",
+            }}
+          >
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <button
+                onClick={handleInspire}
+                disabled={loading}
+                title="Yeni ilham al"
+                style={{
+                  flexShrink: 0,
+                  width: 42,
+                  height: 42,
+                  borderRadius: "50%",
+                  background: "transparent",
+                  border: `1px solid ${loading ? "rgba(91,143,175,0.12)" : "rgba(91,143,175,0.3)"}`,
+                  cursor: loading ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.3s ease",
+                  padding: 0,
+                }}
+              >
+                <FloralSVG size={20} opacity={loading ? 0.15 : 0.6} />
+              </button>
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  background: "rgba(255,255,255,0.04)",
+                  borderRadius: 24,
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  overflow: "hidden",
+                  backdropFilter: "blur(10px)",
+                }}
+              >
+                <input
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                  placeholder="Cero, bir soru sor..."
+                  disabled={loading}
+                  style={{
+                    flex: 1,
+                    padding: "12px 18px",
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: "#D4D0CB",
+                    fontSize: 14,
+                    fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
+                  }}
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={loading || !input.trim()}
+                  style={{
+                    padding: "0 18px",
+                    background: "transparent",
+                    border: "none",
+                    color: input.trim() ? "#5B8FAF" : "#2a2a2a",
+                    fontSize: 18,
+                    cursor: input.trim() && !loading ? "pointer" : "default",
+                    transition: "color 0.2s",
+                    fontFamily: "sans-serif",
+                  }}
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom floral accent */}
+      {!hasStarted && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 36,
+            display: "flex",
+            gap: 14,
+            alignItems: "center",
+            opacity: 0.3,
+          }}
+        >
+          <FloralSVG size={12} opacity={0.5} />
+          <div
+            style={{
+              width: 40,
+              height: 1,
+              background: "linear-gradient(to right, transparent, #5B8FAF, transparent)",
+            }}
+          />
+          <FloralSVG size={12} opacity={0.5} />
+        </div>
+      )}
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(91,143,175,0.15); border-radius: 4px; }
+        ::placeholder { color: #3a3a3a; }
+        @keyframes pulse {
+          0%, 100% { opacity: 0.2; transform: scale(0.8); }
+          50% { opacity: 0.9; transform: scale(1.15); }
+        }
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </div>
+  );
+}
