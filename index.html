@@ -442,10 +442,19 @@ async function callWebhook(type, message) {
       console.error('[ChezCero] HTTP error:', res.status, errText);
       return null;
     }
-    const data = await res.json();
-    console.log('[ChezCero] Response data:', JSON.stringify(data).substring(0, 200));
-    // n8n respond node'undan gelen yapiyi esnek sekilde parse et
-    return data.response || data.output || data.text || (typeof data === 'string' ? data : null) || JSON.stringify(data);
+    const rawText = await res.text();
+    console.log('[ChezCero] Raw response:', rawText.substring(0, 300));
+    if (!rawText || rawText.trim() === '') {
+      console.error('[ChezCero] Empty response body - n8n workflow muhtemelen Respond node\'a ulasmiyor');
+      return null;
+    }
+    try {
+      const data = JSON.parse(rawText);
+      return data.response || data.output || data.text || data.message || (typeof data === 'string' ? data : JSON.stringify(data));
+    } catch(e) {
+      // JSON degilse direkt text olarak dondur
+      return rawText;
+    }
   } catch(e) {
     console.error('[ChezCero] Webhook error:', e.message);
     return null;
@@ -461,7 +470,7 @@ async function handleInspire() {
   renderMessages();
   setLoading(true);
 
-  let response = await callWebhook('inspire');
+  let response = await callWebhook('inspire', 'Bugun bana ilham ver!');
   if (!response) {
     // Demo fallback
     await new Promise(r => setTimeout(r, 3500));
