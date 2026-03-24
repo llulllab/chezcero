@@ -430,15 +430,24 @@ document.addEventListener('DOMContentLoaded', () => {
 async function callWebhook(type, message) {
   if (!WEBHOOK_URL) return null;
   try {
+    console.log('[ChezCero] Calling webhook:', type, message || '');
     const res = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, message: message || '', session_id: 'chez-cero-session' })
     });
+    console.log('[ChezCero] Response status:', res.status);
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('[ChezCero] HTTP error:', res.status, errText);
+      return null;
+    }
     const data = await res.json();
-    return data.response || null;
+    console.log('[ChezCero] Response data:', JSON.stringify(data).substring(0, 200));
+    // n8n respond node'undan gelen yapiyi esnek sekilde parse et
+    return data.response || data.output || data.text || (typeof data === 'string' ? data : null) || JSON.stringify(data);
   } catch(e) {
-    console.error('Webhook error:', e);
+    console.error('[ChezCero] Webhook error:', e.message);
     return null;
   }
 }
