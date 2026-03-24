@@ -1,8 +1,321 @@
-import { useState, useRef, useEffect } from "react";
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chez Cero</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: #0A0A0A;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      color: #D4D0CB;
+      overflow-x: hidden;
+    }
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(91,143,175,0.15); border-radius: 4px; }
+    ::placeholder { color: #3a3a3a; }
 
-const SAMPLE_RESPONSES = [
-  {
-    text: `Cero, bugun senin icin dunya mutfaklarindan 4 heyecan verici fikir sectim:
+    @keyframes pulse {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 0.9; transform: scale(1.15); }
+    }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* --- Layout --- */
+    #app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    .top-glow {
+      position: fixed; top: -20%; left: 50%; transform: translateX(-50%);
+      width: 120vw; height: 60vh;
+      background: radial-gradient(ellipse at center, rgba(91,143,175,0.035) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+    .floral-cluster {
+      position: absolute; pointer-events: none; z-index: 0;
+    }
+    .main-col {
+      width: 100%; max-width: 660px; flex: 1;
+      display: flex; flex-direction: column;
+      position: relative; z-index: 1; padding: 0 20px;
+    }
+
+    /* --- Header --- */
+    #header {
+      text-align: center;
+      padding-top: 16vh; padding-bottom: 44px;
+      transition: padding 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+    #header.started { padding-top: 28px; padding-bottom: 16px; }
+
+    #header-flower { display: flex; justify-content: center; margin-bottom: 14px; transition: opacity 0.5s, height 0.5s; }
+    #header.started #header-flower { opacity: 0; height: 0; margin: 0; overflow: hidden; }
+
+    #title {
+      font-size: 52px; letter-spacing: 6px; font-weight: 600; color: #E8E4DF;
+      transition: all 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+    #header.started #title { font-size: 26px; letter-spacing: 3px; }
+
+    #subtitle {
+      font-size: 12px; letter-spacing: 5px; text-transform: uppercase;
+      color: #5B8FAF; margin-top: 10px;
+      font-family: 'Inter', 'Helvetica Neue', sans-serif; font-weight: 400;
+      transition: all 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+    #header.started #subtitle { font-size: 10px; letter-spacing: 2px; margin-top: 3px; }
+
+    #tagline {
+      margin-top: 20px; font-size: 15px; color: #7a756e;
+      font-style: italic; line-height: 1.7; max-width: 380px;
+      margin-left: auto; margin-right: auto;
+      transition: opacity 0.5s, max-height 0.5s;
+    }
+    #header.started #tagline { opacity: 0; max-height: 0; margin: 0; overflow: hidden; }
+
+    /* --- Main Button --- */
+    #inspire-section { display: flex; justify-content: center; margin-bottom: 40px; transition: opacity 0.4s, max-height 0.4s; }
+    #inspire-section.hidden { opacity: 0; max-height: 0; margin: 0; overflow: hidden; pointer-events: none; }
+
+    #inspire-btn {
+      background: transparent; color: #D4D0CB;
+      border: 1px solid rgba(91,143,175,0.4); border-radius: 100px;
+      padding: 18px 44px; font-size: 14px;
+      font-family: 'Inter', 'Helvetica Neue', sans-serif;
+      font-weight: 500; letter-spacing: 4px; text-transform: uppercase;
+      cursor: pointer; transition: all 0.4s ease;
+    }
+    #inspire-btn:hover {
+      background: rgba(91,143,175,0.1); border-color: rgba(91,143,175,0.7);
+      color: #E8E4DF; box-shadow: 0 0 30px rgba(91,143,175,0.15);
+    }
+
+    /* --- Chat --- */
+    #chat-area {
+      flex: 1; overflow-y: auto; padding-bottom: 100px;
+      display: none;
+    }
+    #chat-area.visible { display: block; }
+
+    .msg-row { display: flex; margin-bottom: 16px; animation: fadeSlideIn 0.4s ease-out; }
+    .msg-row.user { justify-content: flex-end; }
+    .msg-row.assistant { justify-content: flex-start; }
+
+    .msg-bubble {
+      font-size: 14px; font-family: 'Inter', 'Helvetica Neue', sans-serif;
+      line-height: 1.6; backdrop-filter: blur(10px);
+    }
+    .msg-bubble.user {
+      max-width: 70%; padding: 10px 18px;
+      border-radius: 18px 18px 4px 18px;
+      background: rgba(91,143,175,0.15);
+      border: 1px solid rgba(91,143,175,0.25);
+    }
+    .msg-bubble.assistant {
+      max-width: 95%; padding: 20px 24px;
+      border-radius: 18px 18px 18px 4px;
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* Message formatting */
+    .msg-bubble.assistant .dish-title { font-weight: 700; font-size: 1.05em; margin: 18px 0 4px; color: #7BAFC9; }
+    .msg-bubble.assistant .home-tip { font-style: italic; color: #5B8FAF; margin: 4px 0 14px; padding-left: 12px; border-left: 2px solid rgba(91,143,175,0.4); font-size: 0.92em; }
+    .msg-bubble.assistant .note { font-style: italic; opacity: 0.45; font-size: 0.88em; margin-top: 12px; }
+    .msg-bubble.assistant hr { border: none; border-top: 1px solid rgba(91,143,175,0.1); margin: 10px 0; }
+    .msg-bubble.assistant p { margin: 4px 0; line-height: 1.65; }
+
+    /* Loading */
+    #loading-indicator {
+      display: none; justify-content: flex-start; margin-bottom: 16px;
+    }
+    #loading-indicator.visible { display: flex; }
+    #loading-inner {
+      padding: 14px 22px; border-radius: 18px 18px 18px 4px;
+      background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.05);
+      display: flex; align-items: center; gap: 12px;
+      font-family: 'Inter', 'Helvetica Neue', sans-serif; font-size: 13px;
+      backdrop-filter: blur(10px);
+    }
+    .loading-dot {
+      width: 5px; height: 5px; border-radius: 50%; background: #5B8FAF;
+    }
+    .loading-dot:nth-child(1) { animation: pulse 1.4s ease-in-out 0s infinite; }
+    .loading-dot:nth-child(2) { animation: pulse 1.4s ease-in-out 0.25s infinite; }
+    .loading-dot:nth-child(3) { animation: pulse 1.4s ease-in-out 0.5s infinite; }
+    #loading-text { font-style: italic; color: #6a6560; }
+
+    /* --- Input Area --- */
+    #input-area {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 660px; padding: 12px 20px 24px;
+      background: linear-gradient(transparent, #0A0A0A 30%);
+      display: none; z-index: 10;
+    }
+    #input-area.visible { display: block; }
+    #input-row { display: flex; gap: 10px; align-items: center; }
+
+    #reinspire-btn {
+      flex-shrink: 0; width: 42px; height: 42px; border-radius: 50%;
+      background: transparent; border: 1px solid rgba(91,143,175,0.3);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.3s ease; padding: 0;
+    }
+    #reinspire-btn:disabled { border-color: rgba(91,143,175,0.12); cursor: not-allowed; }
+    #reinspire-btn:disabled svg { opacity: 0.15; }
+
+    #input-wrap {
+      flex: 1; display: flex;
+      background: rgba(255,255,255,0.04); border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.07); overflow: hidden;
+      backdrop-filter: blur(10px);
+    }
+    #msg-input {
+      flex: 1; padding: 12px 18px; background: transparent;
+      border: none; outline: none; color: #D4D0CB; font-size: 14px;
+      font-family: 'Inter', 'Helvetica Neue', sans-serif;
+    }
+    #send-btn {
+      padding: 0 18px; background: transparent; border: none;
+      color: #2a2a2a; font-size: 18px; cursor: default;
+      transition: color 0.2s; font-family: sans-serif;
+    }
+    #send-btn.active { color: #5B8FAF; cursor: pointer; }
+
+    /* --- Bottom floral --- */
+    #bottom-accent {
+      position: fixed; bottom: 36px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 14px; align-items: center; opacity: 0.3;
+      transition: opacity 0.4s;
+    }
+    #bottom-accent.hidden { opacity: 0; pointer-events: none; }
+    .accent-line {
+      width: 40px; height: 1px;
+      background: linear-gradient(to right, transparent, #5B8FAF, transparent);
+    }
+
+    /* Extra floral clusters */
+    .floral-cluster.tr { top: 20px; right: 30px; }
+    .floral-cluster.bl { bottom: 60px; left: 20px; }
+    .floral-cluster.ml { top: 35%; left: 40px; }
+    .floral-cluster.mr { top: 55%; right: 50px; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <div class="top-glow"></div>
+
+  <!-- Floral clusters -->
+  <div class="floral-cluster tr" id="fc-tr"></div>
+  <div class="floral-cluster bl" id="fc-bl"></div>
+  <div class="floral-cluster ml" id="fc-ml"></div>
+  <div class="floral-cluster mr" id="fc-mr"></div>
+
+  <div class="main-col">
+    <!-- Header -->
+    <header id="header">
+      <div id="header-flower"></div>
+      <div id="title">Chez Cero</div>
+      <div id="subtitle">Michelin Ilhamlari</div>
+      <div id="tagline">Cero, dunyanin en ozel mutfaklarindan<br>sana ozel ilhamlar burada.</div>
+    </header>
+
+    <!-- Main button -->
+    <div id="inspire-section">
+      <button id="inspire-btn" onclick="handleInspire()">Bugun Bana Ilham Ver</button>
+    </div>
+
+    <!-- Chat -->
+    <div id="chat-area"></div>
+    <div id="loading-indicator">
+      <div id="loading-inner">
+        <div style="display:flex;gap:5px">
+          <div class="loading-dot"></div>
+          <div class="loading-dot"></div>
+          <div class="loading-dot"></div>
+        </div>
+        <span id="loading-text"></span>
+      </div>
+    </div>
+    <div id="chat-end"></div>
+  </div>
+
+  <!-- Input area -->
+  <div id="input-area">
+    <div id="input-row">
+      <button id="reinspire-btn" onclick="handleInspire()" title="Yeni ilham al"></button>
+      <div id="input-wrap">
+        <input id="msg-input" placeholder="Cero, bir soru sor..." onkeydown="if(event.key==='Enter')handleSend()">
+        <button id="send-btn" onclick="handleSend()">›</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom accent -->
+  <div id="bottom-accent">
+    <div id="ba-flower1"></div>
+    <div class="accent-line"></div>
+    <div id="ba-flower2"></div>
+  </div>
+</div>
+
+<script>
+// ---- SVG Helpers ----
+function makeFloral(size, opacity) {
+  const petals = [0,60,120,180,240,300].map(a =>
+    `<ellipse cx="24" cy="24" rx="4.5" ry="10" fill="#5B8FAF" transform="rotate(${a} 24 24) translate(0 -8)" opacity="0.7"/>`
+  ).join('');
+  return `<svg width="${size}" height="${size}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:${opacity};display:block">`
+    + `<g>${petals}<circle cx="24" cy="24" r="3.5" fill="#7BAFC9"/><circle cx="24" cy="24" r="1.8" fill="#A8D4E6"/></g></svg>`;
+}
+
+function makeCluster() {
+  return `<div style="position:relative">${makeFloral(20,0.25)}`
+    + `<div style="position:absolute;top:-6px;left:16px">${makeFloral(14,0.18)}</div>`
+    + `<div style="position:absolute;top:14px;left:20px">${makeFloral(10,0.12)}</div></div>`;
+}
+
+// Place florals
+document.getElementById('fc-tr').innerHTML = makeCluster();
+document.getElementById('fc-bl').innerHTML = makeCluster();
+document.getElementById('fc-ml').innerHTML = makeCluster();
+document.getElementById('fc-mr').innerHTML = makeCluster();
+document.getElementById('header-flower').innerHTML = makeFloral(32, 0.4);
+document.getElementById('reinspire-btn').innerHTML = makeFloral(20, 0.6);
+document.getElementById('ba-flower1').innerHTML = makeFloral(12, 0.5);
+document.getElementById('ba-flower2').innerHTML = makeFloral(12, 0.5);
+
+// ---- State ----
+let messages = [];
+let loading = false;
+let hasStarted = false;
+let loadingInterval = null;
+
+const WEBHOOK_URL = 'https://n8n.tropus.io/webhook/michelin-inspire';
+
+const LOADING_MESSAGES = [
+  "Michelin yildizlarini ariyorum...",
+  "Dunya mutfaklarini tariyorum...",
+  "Seflerin ilhamlarini topluyorum...",
+  "En ilginc yemekleri seciyorum...",
+  "Tokyo'dan Paris'e, Lima'dan Bangkok'a...",
+];
+
+const SAMPLE_RESPONSE = `Cero, bugun senin icin dunya mutfaklarindan 4 heyecan verici fikir sectim:
 
 ---
 
@@ -26,495 +339,156 @@ Massimo Bottura'nin yeni sezon menusunde yer alan bu yemekte ordek, farkli pisir
 
 **4. Yenilebilir Helyum Balonu — Alinea, Chicago**
 Grant Achatz'in ikonik tatlisi: gercekten havada suzulen, yesil elma aromali seker balonu. Misafirler balonu ip ucundan tutup yiyor.
-*Evde dene: Izomalt sekerle seker baloncuklari dene, icine meyve aromasi ekle.*`,
-  },
-];
+*Evde dene: Izomalt sekerle seker baloncuklari dene, icine meyve aromasi ekle.*`;
 
-const LOADING_MESSAGES = [
-  "Michelin yildizlarini ariyorum...",
-  "Dunya mutfaklarini tariyorum...",
-  "Seflerin ilhamlarini topluyorum...",
-  "En ilginc yemekleri seciyorum...",
-  "Tokyo'dan Paris'e, Lima'dan Bangkok'a...",
-];
-
-const FloralSVG = ({ size = 24, opacity = 0.35, style = {} }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 48 48"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    style={{ opacity, display: "block", ...style }}
-  >
-    <g>
-      {[0, 60, 120, 180, 240, 300].map((angle, i) => (
-        <ellipse
-          key={i}
-          cx="24"
-          cy="24"
-          rx="4.5"
-          ry="10"
-          fill="#5B8FAF"
-          transform={`rotate(${angle} 24 24) translate(0 -8)`}
-          opacity={0.7}
-        />
-      ))}
-      <circle cx="24" cy="24" r="3.5" fill="#7BAFC9" />
-      <circle cx="24" cy="24" r="1.8" fill="#A8D4E6" />
-    </g>
-  </svg>
-);
-
-const FloralCluster = ({ style = {} }) => (
-  <div style={{ position: "absolute", pointerEvents: "none", ...style }}>
-    <FloralSVG size={20} opacity={0.25} />
-    <FloralSVG size={14} opacity={0.18} style={{ position: "absolute", top: -6, left: 16 }} />
-    <FloralSVG size={10} opacity={0.12} style={{ position: "absolute", top: 14, left: 20 }} />
-  </div>
-);
-
-export default function ChezCero() {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState("");
-  const [hasStarted, setHasStarted] = useState(false);
-  const chatEndRef = useRef(null);
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loadingText]);
-
-  useEffect(() => {
-    let interval;
-    if (loading) {
-      let idx = 0;
-      setLoadingText(LOADING_MESSAGES[0]);
-      interval = setInterval(() => {
-        idx = (idx + 1) % LOADING_MESSAGES.length;
-        setLoadingText(LOADING_MESSAGES[idx]);
-      }, 2200);
+// ---- Rendering ----
+function formatAssistantText(text) {
+  return text.split('\n').map(line => {
+    if (line.match(/^\*\*\d+\./)) {
+      return `<p class="dish-title">${line.replace(/\*\*/g, '')}</p>`;
     }
-    return () => clearInterval(interval);
-  }, [loading]);
-
-  const handleInspire = async () => {
-    setHasStarted(true);
-    setMessages((prev) => [...prev, { role: "user", text: "Bugun bana ilham ver!" }]);
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 4000));
-    setMessages((prev) => [...prev, { role: "assistant", text: SAMPLE_RESPONSES[0].text }]);
-    setLoading(false);
-  };
-
-  const handleSend = async () => {
-    if (!input.trim() || loading) return;
-    const userMsg = input.trim();
-    setInput("");
-    setMessages((prev) => [...prev, { role: "user", text: userMsg }]);
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 3000));
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        text: `Cero, harika soru! "${userMsg}" hakkinda biraz daha detay vereyim...\n\nBu konuda Michelin seflerinin yaklasimi genellikle mevsimsel malzemeleri on plana cikarmak ve minimalist sunumla maksimum lezzet kontrasti yaratmak uzerine kurulu.\n\n*Not: Bu demo bir yanittir. Gercek n8n flow'u baglandiginda, detayli ve guncel yanitlar alacaksin.*`,
-      },
-    ]);
-    setLoading(false);
-    inputRef.current?.focus();
-  };
-
-  const formatMessage = (text) => {
-    return text.split("\n").map((line, i) => {
-      if (line.startsWith("**") && line.endsWith("**")) {
-        return (
-          <p key={i} style={{ fontWeight: 700, margin: "12px 0 4px" }}>
-            {line.replace(/\*\*/g, "")}
-          </p>
-        );
-      }
-      if (line.match(/^\*\*\d+\./)) {
-        const clean = line.replace(/\*\*/g, "");
-        return (
-          <p key={i} style={{ fontWeight: 700, fontSize: "1.05em", margin: "18px 0 4px", color: "#7BAFC9" }}>
-            {clean}
-          </p>
-        );
-      }
-      if (line.startsWith("*Evde dene:")) {
-        return (
-          <p key={i} style={{ fontStyle: "italic", color: "#5B8FAF", margin: "4px 0 14px", paddingLeft: 12, borderLeft: "2px solid rgba(91,143,175,0.4)", fontSize: "0.92em" }}>
-            {line.replace(/\*/g, "")}
-          </p>
-        );
-      }
-      if (line.startsWith("*Not:")) {
-        return (
-          <p key={i} style={{ fontStyle: "italic", opacity: 0.45, fontSize: "0.88em", marginTop: 12 }}>
-            {line.replace(/\*/g, "")}
-          </p>
-        );
-      }
-      if (line === "---") {
-        return <hr key={i} style={{ border: "none", borderTop: "1px solid rgba(91,143,175,0.1)", margin: "10px 0" }} />;
-      }
-      if (line.trim() === "") return <br key={i} />;
-      return (
-        <p key={i} style={{ margin: "4px 0", lineHeight: 1.65 }}>
-          {line}
-        </p>
-      );
-    });
-  };
-
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#0A0A0A",
-        fontFamily: "'Cormorant Garamond', Georgia, serif",
-        color: "#D4D0CB",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      {/* Subtle top glow */}
-      <div
-        style={{
-          position: "fixed",
-          top: "-20%",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "120vw",
-          height: "60vh",
-          background: "radial-gradient(ellipse at center, rgba(91,143,175,0.035) 0%, transparent 70%)",
-          pointerEvents: "none",
-          zIndex: 0,
-        }}
-      />
-
-      {/* Floral decorations */}
-      <FloralCluster style={{ top: 20, right: 30 }} />
-      <FloralCluster style={{ bottom: 60, left: 20 }} />
-      {!hasStarted && (
-        <>
-          <FloralCluster style={{ top: "35%", left: 40 }} />
-          <FloralCluster style={{ top: "55%", right: 50 }} />
-        </>
-      )}
-
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 660,
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          position: "relative",
-          zIndex: 1,
-          padding: "0 20px",
-        }}
-      >
-        {/* Header */}
-        <header
-          style={{
-            textAlign: "center",
-            paddingTop: hasStarted ? 28 : "16vh",
-            paddingBottom: hasStarted ? 16 : 44,
-            transition: "padding 0.8s cubic-bezier(0.4,0,0.2,1)",
-          }}
-        >
-          {!hasStarted && (
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
-              <FloralSVG size={32} opacity={0.4} />
-            </div>
-          )}
-
-          <div
-            style={{
-              fontSize: hasStarted ? 26 : 52,
-              letterSpacing: hasStarted ? 3 : 6,
-              fontWeight: 600,
-              color: "#E8E4DF",
-              transition: "all 0.8s cubic-bezier(0.4,0,0.2,1)",
-            }}
-          >
-            Chez Cero
-          </div>
-          <div
-            style={{
-              fontSize: hasStarted ? 10 : 12,
-              letterSpacing: hasStarted ? 2 : 5,
-              textTransform: "uppercase",
-              color: "#5B8FAF",
-              marginTop: hasStarted ? 3 : 10,
-              fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
-              fontWeight: 400,
-              transition: "all 0.8s cubic-bezier(0.4,0,0.2,1)",
-            }}
-          >
-            Michelin Ilhamlari
-          </div>
-
-          {!hasStarted && (
-            <div
-              style={{
-                marginTop: 20,
-                fontSize: 15,
-                color: "#7a756e",
-                fontStyle: "italic",
-                lineHeight: 1.7,
-                maxWidth: 380,
-                marginLeft: "auto",
-                marginRight: "auto",
-              }}
-            >
-              Cero, dunyanin en ozel mutfaklarindan
-              <br />
-              sana ozel ilhamlar burada.
-            </div>
-          )}
-        </header>
-
-        {/* Main Button */}
-        {!hasStarted && (
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 40 }}>
-            <button
-              onClick={handleInspire}
-              style={{
-                background: "transparent",
-                color: "#D4D0CB",
-                border: "1px solid rgba(91,143,175,0.4)",
-                borderRadius: 100,
-                padding: "18px 44px",
-                fontSize: 14,
-                fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
-                fontWeight: 500,
-                letterSpacing: 4,
-                textTransform: "uppercase",
-                cursor: "pointer",
-                transition: "all 0.4s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.background = "rgba(91,143,175,0.1)";
-                e.target.style.borderColor = "rgba(91,143,175,0.7)";
-                e.target.style.color = "#E8E4DF";
-                e.target.style.boxShadow = "0 0 30px rgba(91,143,175,0.15)";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = "transparent";
-                e.target.style.borderColor = "rgba(91,143,175,0.4)";
-                e.target.style.color = "#D4D0CB";
-                e.target.style.boxShadow = "none";
-              }}
-            >
-              Bugun Bana Ilham Ver
-            </button>
-          </div>
-        )}
-
-        {/* Chat */}
-        {hasStarted && (
-          <div style={{ flex: 1, overflowY: "auto", paddingBottom: 100 }}>
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
-                  marginBottom: 16,
-                  animation: "fadeSlideIn 0.4s ease-out",
-                }}
-              >
-                <div
-                  style={{
-                    maxWidth: msg.role === "user" ? "70%" : "95%",
-                    padding: msg.role === "user" ? "10px 18px" : "20px 24px",
-                    borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                    background: msg.role === "user" ? "rgba(91,143,175,0.15)" : "rgba(255,255,255,0.025)",
-                    border: msg.role === "user" ? "1px solid rgba(91,143,175,0.25)" : "1px solid rgba(255,255,255,0.05)",
-                    fontSize: 14,
-                    fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
-                    lineHeight: 1.6,
-                    backdropFilter: "blur(10px)",
-                  }}
-                >
-                  {msg.role === "assistant" ? formatMessage(msg.text) : msg.text}
-                </div>
-              </div>
-            ))}
-
-            {loading && (
-              <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 16 }}>
-                <div
-                  style={{
-                    padding: "14px 22px",
-                    borderRadius: "18px 18px 18px 4px",
-                    background: "rgba(255,255,255,0.025)",
-                    border: "1px solid rgba(255,255,255,0.05)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
-                    fontSize: 13,
-                    backdropFilter: "blur(10px)",
-                  }}
-                >
-                  <div style={{ display: "flex", gap: 5 }}>
-                    {[0, 1, 2].map((j) => (
-                      <div
-                        key={j}
-                        style={{
-                          width: 5,
-                          height: 5,
-                          borderRadius: "50%",
-                          background: "#5B8FAF",
-                          animation: `pulse 1.4s ease-in-out ${j * 0.25}s infinite`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <span style={{ fontStyle: "italic", color: "#6a6560" }}>{loadingText}</span>
-                </div>
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-        )}
-
-        {/* Input area */}
-        {hasStarted && (
-          <div
-            style={{
-              position: "fixed",
-              bottom: 0,
-              left: "50%",
-              transform: "translateX(-50%)",
-              width: "100%",
-              maxWidth: 660,
-              padding: "12px 20px 24px",
-              background: "linear-gradient(transparent, #0A0A0A 30%)",
-            }}
-          >
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <button
-                onClick={handleInspire}
-                disabled={loading}
-                title="Yeni ilham al"
-                style={{
-                  flexShrink: 0,
-                  width: 42,
-                  height: 42,
-                  borderRadius: "50%",
-                  background: "transparent",
-                  border: `1px solid ${loading ? "rgba(91,143,175,0.12)" : "rgba(91,143,175,0.3)"}`,
-                  cursor: loading ? "not-allowed" : "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "all 0.3s ease",
-                  padding: 0,
-                }}
-              >
-                <FloralSVG size={20} opacity={loading ? 0.15 : 0.6} />
-              </button>
-              <div
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  background: "rgba(255,255,255,0.04)",
-                  borderRadius: 24,
-                  border: "1px solid rgba(255,255,255,0.07)",
-                  overflow: "hidden",
-                  backdropFilter: "blur(10px)",
-                }}
-              >
-                <input
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                  placeholder="Cero, bir soru sor..."
-                  disabled={loading}
-                  style={{
-                    flex: 1,
-                    padding: "12px 18px",
-                    background: "transparent",
-                    border: "none",
-                    outline: "none",
-                    color: "#D4D0CB",
-                    fontSize: 14,
-                    fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
-                  }}
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={loading || !input.trim()}
-                  style={{
-                    padding: "0 18px",
-                    background: "transparent",
-                    border: "none",
-                    color: input.trim() ? "#5B8FAF" : "#2a2a2a",
-                    fontSize: 18,
-                    cursor: input.trim() && !loading ? "pointer" : "default",
-                    transition: "color 0.2s",
-                    fontFamily: "sans-serif",
-                  }}
-                >
-                  ›
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Bottom floral accent */}
-      {!hasStarted && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 36,
-            display: "flex",
-            gap: 14,
-            alignItems: "center",
-            opacity: 0.3,
-          }}
-        >
-          <FloralSVG size={12} opacity={0.5} />
-          <div
-            style={{
-              width: 40,
-              height: 1,
-              background: "linear-gradient(to right, transparent, #5B8FAF, transparent)",
-            }}
-          />
-          <FloralSVG size={12} opacity={0.5} />
-        </div>
-      )}
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        ::-webkit-scrollbar { width: 3px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(91,143,175,0.15); border-radius: 4px; }
-        ::placeholder { color: #3a3a3a; }
-        @keyframes pulse {
-          0%, 100% { opacity: 0.2; transform: scale(0.8); }
-          50% { opacity: 0.9; transform: scale(1.15); }
-        }
-        @keyframes fadeSlideIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-    </div>
-  );
+    if (line.startsWith('*Evde dene:')) {
+      return `<p class="home-tip">${line.replace(/\*/g, '')}</p>`;
+    }
+    if (line.startsWith('*Not:')) {
+      return `<p class="note">${line.replace(/\*/g, '')}</p>`;
+    }
+    if (line === '---') return '<hr>';
+    if (line.trim() === '') return '<br>';
+    // Bold inline
+    let processed = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    return `<p>${processed}</p>`;
+  }).join('');
 }
+
+function renderMessages() {
+  const area = document.getElementById('chat-area');
+  area.innerHTML = messages.map(msg => {
+    const content = msg.role === 'assistant' ? formatAssistantText(msg.text) : escapeHtml(msg.text);
+    return `<div class="msg-row ${msg.role}"><div class="msg-bubble ${msg.role}">${content}</div></div>`;
+  }).join('');
+  setTimeout(() => document.getElementById('chat-end').scrollIntoView({ behavior: 'smooth' }), 50);
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function setStartedUI() {
+  hasStarted = true;
+  document.getElementById('header').classList.add('started');
+  document.getElementById('inspire-section').classList.add('hidden');
+  document.getElementById('chat-area').classList.add('visible');
+  document.getElementById('input-area').classList.add('visible');
+  document.getElementById('bottom-accent').classList.add('hidden');
+  document.getElementById('fc-ml').style.display = 'none';
+  document.getElementById('fc-mr').style.display = 'none';
+}
+
+function setLoading(on) {
+  loading = on;
+  const indicator = document.getElementById('loading-indicator');
+  const input = document.getElementById('msg-input');
+  const reBtn = document.getElementById('reinspire-btn');
+
+  if (on) {
+    indicator.classList.add('visible');
+    input.disabled = true;
+    reBtn.disabled = true;
+    reBtn.innerHTML = makeFloral(20, 0.15);
+    let idx = 0;
+    document.getElementById('loading-text').textContent = LOADING_MESSAGES[0];
+    loadingInterval = setInterval(() => {
+      idx = (idx + 1) % LOADING_MESSAGES.length;
+      document.getElementById('loading-text').textContent = LOADING_MESSAGES[idx];
+    }, 2200);
+  } else {
+    indicator.classList.remove('visible');
+    input.disabled = false;
+    reBtn.disabled = false;
+    reBtn.innerHTML = makeFloral(20, 0.6);
+    clearInterval(loadingInterval);
+  }
+  updateSendBtn();
+  setTimeout(() => document.getElementById('chat-end').scrollIntoView({ behavior: 'smooth' }), 50);
+}
+
+function updateSendBtn() {
+  const btn = document.getElementById('send-btn');
+  const val = document.getElementById('msg-input').value.trim();
+  if (val && !loading) {
+    btn.classList.add('active');
+  } else {
+    btn.classList.remove('active');
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('msg-input').addEventListener('input', updateSendBtn);
+});
+
+// ---- API ----
+async function callWebhook(type, message) {
+  if (!WEBHOOK_URL) return null;
+  try {
+    const res = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, message: message || '', session_id: 'chez-cero-session' })
+    });
+    const data = await res.json();
+    return data.response || null;
+  } catch(e) {
+    console.error('Webhook error:', e);
+    return null;
+  }
+}
+
+// ---- Handlers ----
+async function handleInspire() {
+  if (loading) return;
+  if (!hasStarted) setStartedUI();
+
+  messages.push({ role: 'user', text: 'Bugun bana ilham ver!' });
+  renderMessages();
+  setLoading(true);
+
+  let response = await callWebhook('inspire');
+  if (!response) {
+    // Demo fallback
+    await new Promise(r => setTimeout(r, 3500));
+    response = SAMPLE_RESPONSE;
+  }
+
+  messages.push({ role: 'assistant', text: response });
+  setLoading(false);
+  renderMessages();
+}
+
+async function handleSend() {
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if (!text || loading) return;
+  input.value = '';
+  updateSendBtn();
+
+  if (!hasStarted) setStartedUI();
+
+  messages.push({ role: 'user', text });
+  renderMessages();
+  setLoading(true);
+
+  let response = await callWebhook('followup', text);
+  if (!response) {
+    await new Promise(r => setTimeout(r, 2500));
+    response = `Cero, harika soru! "${text}" hakkinda biraz daha detay vereyim...\n\nBu konuda Michelin seflerinin yaklasimi genellikle mevsimsel malzemeleri on plana cikarmak ve minimalist sunumla maksimum lezzet kontrasti yaratmak uzerine kurulu.\n\n*Not: Bu demo bir yanittir. n8n webhook URL'ini bagladiginizda gercek yanitlar gelecek.*`;
+  }
+
+  messages.push({ role: 'assistant', text: response });
+  setLoading(false);
+  renderMessages();
+  input.focus();
+}
+</script>
+
+</body>
+</html>
