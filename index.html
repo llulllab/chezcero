@@ -207,6 +207,23 @@
       background: linear-gradient(to right, transparent, #5B8FAF, transparent);
     }
 
+    /* --- Footer --- */
+    #site-footer {
+      position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%);
+      z-index: 5; text-align: center;
+      transition: opacity 0.4s;
+    }
+    #site-footer a {
+      font-family: 'Inter', 'Helvetica Neue', sans-serif;
+      font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      color: rgba(91,143,175,0.6);
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+    #site-footer a:hover {
+      color: rgba(91,143,175,0.85);
+    }
+
     /* Extra floral clusters */
     .floral-cluster.tr { top: 20px; right: 30px; }
     .floral-cluster.bl { bottom: 60px; left: 20px; }
@@ -270,6 +287,11 @@
     <div id="ba-flower1"></div>
     <div class="accent-line"></div>
     <div id="ba-flower2"></div>
+  </div>
+
+  <!-- Footer -->
+  <div id="site-footer">
+    <a href="https://llulllab.com/en/studio.html" target="_blank" rel="noopener"> powered by Studio Llull</a>
   </div>
 </div>
 
@@ -381,6 +403,7 @@ function setStartedUI() {
   document.getElementById('chat-area').classList.add('visible');
   document.getElementById('input-area').classList.add('visible');
   document.getElementById('bottom-accent').classList.add('hidden');
+  document.getElementById('site-footer').style.opacity = '0';
   document.getElementById('fc-ml').style.display = 'none';
   document.getElementById('fc-mr').style.display = 'none';
 }
